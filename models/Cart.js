@@ -1,56 +1,33 @@
-const Product = require("./Product");
+const { getDatabase } = require('../database');
+const COLLECTION_NAME = 'carts';
 
 class Cart {
-  constructor() {}
-
-  static #items = [];
-
-  static add(productName) {
-    const product = Product.findByName(productName);
-
-    if (!product) {
-      throw new error(`Product '${productName}' not found.`);
-    }
-
-    if (!this.#items.length) {
-      this.#items.push({ product, quantity: 1 });
-
-      return;
-    }
-
-    const existingProduct = this.#items.find(
-      (item) => item.product.name === productName
-    );
-
-    if (existingProduct) {
-      existingProduct.quantity += 1;
-    } else {
-      this.#items.push({ product, quantity: 1 });
-    }
+  constructor(userId) {
+    this.userId = userId;
   }
 
-  static getItems() {
-    return this.#items;
+  addItem(product) {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).findOne({ userId: this.userId })
+        .then(cart => {
+          if (!cart) {
+            return db.collection(COLLECTION_NAME).insertOne({
+              userId: this.userId,
+              items: [product]
+            });
+          } else {
+            cart.items.push(product);
+            return db.collection(COLLECTION_NAME).updateOne(
+                { userId: this.userId },
+                { $set: { items: cart.items } }
+            );
+          }
+        });
   }
 
-  static getProductsQuantity() {
-    if (!this.#items?.length) {
-      return 0;
-    }
-
-    return this.#items.reduce((total, item) => {
-      return total + item.quantity;
-    }, 0);
-  }
-
-  static getTotalPrice() {
-    return this.#items.reduce((total, item) => {
-      return total + item.product.price * item.quantity;
-    }, 0);
-  }
-
-  static clearCart() {
-    this.#items = [];
+  static getCart(userId) {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).findOne({ userId });
   }
 }
 

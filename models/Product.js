@@ -1,34 +1,26 @@
+const { getDatabase } = require('../database');
+const COLLECTION_NAME = 'products';
+
 class Product {
-  constructor(name, description, price) {
+  constructor(name, price) {
     this.name = name;
-    this.description = description;
     this.price = price;
   }
 
-  static #products = [];
-
-  static getAll() {
-    return this.#products;
+  save() {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).findOne({ name: this.name })
+        .then(existing => {
+          if (existing) {
+            return Promise.reject(new Error('Product already exists'));
+          }
+          return db.collection(COLLECTION_NAME).insertOne(this);
+        });
   }
 
-  static add(product) {
-    this.#products.push(product);
-  }
-
-  static findByName(name) {
-    return this.#products.find((product) => product.name === name);
-  }
-
-  static deleteByName(name) {
-    this.#products = this.#products.filter((product) => product.name !== name);
-  }
-
-  static getLast() {
-    if (!this.#products.length) {
-      return;
-    }
-
-    return this.#products[this.#products.length - 1];
+  static fetchAll() {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).find().toArray();
   }
 }
 
